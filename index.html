@@ -24,7 +24,7 @@
     const app = createApp({
       data() {
         return {
-          url: 'https://newsapi.org/v2/everything?q=COVID-19&pageSize=100&apiKey=0a711b4790ef4c0aa8c1adb14004df58',
+          url: 'https://newsapi.org/v2/everything?q=COVID-19&pageSize=100&apiKey=0a711b4790ef4c0aa8c1adb14004df581',
           data: [],
           num: 0,
           temp: {},
@@ -37,10 +37,11 @@
             .get(url)
             .then((response) => {
               this.data = response.data.articles;
-              console.log(url)
+              console.log(this.data)
             })
             .catch((error) => {
               console.log(error)
+              alert('The page only works on localhost!\n( Since May 2020, newsapi.org changed the liberties of the free developer keys and now reject any request that is not coming from localhost.)')
             })
         },
         submitHandler(value) {
