@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-Hant-tw">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>News API</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+</head>
+
+<body>
+  <div id="app" class="container">
+    <input-component @custom-submit="submitHandler" v-show="isShow"></input-component>
+    <card-component :card="displayData" @custom-display="display" v-show="isShow"></card-component>
+    <pagination-component :data="data" :num="num" @custom-pre="prePage" @custom-page="changePage"
+      @custom-next="nextPage" v-show="isShow"></pagination-component>
+    <detail-component :temp="temp" @custom-show="showHandler" v-show="!isShow"></detail-component>
+  </div>
+  <script type="module">
+    import { createApp } from
+      'https://cdnjs.cloudflare.com/ajax/libs/vue/3.1.4/vue.esm-browser.min.js'
+    const app = createApp({
+      data() {
+        return {
+          url: 'https://newsapi.org/v2/everything?q=COVID-19&pageSize=100&apiKey=0a711b4790ef4c0aa8c1adb14004df58',
+          data: [],
+          num: 0,
+          temp: {},
+          isShow: true,
+        }
+      },
+      methods: {
+        getData(url) {
+          axios
+            .get(url)
+            .then((response) => {
+              this.data = response.data.articles;
+              console.log(url)
+            })
+            .catch((error) => {
+              console.log(error)
+            })
+        },
+        submitHandler(value) {
+          this.url = `https://newsapi.org/v2/everything?q=${value.keyword}&from=${value.startTime}&to=${value.endTime}&sortBy=${value.sortBy}&pageSize=100&apiKey=0a711b4790ef4c0aa8c1adb14004df58`
+          this.getData(this.url)
+          this.num = 0
+        },
+        display(value) {
+          this.scrollToTop()
+          this.showHandler(false)
+          this.temp = { ...value }
+          this.temp.publishedAt = this.temp.publishedAt.split('T')[0]
+          this.temp.source = this.temp.source.name
+        },
+        showHandler(value) {
+          this.isShow = value
+        },
+        scrollToTop() {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        },
+        prePage() {
+          if (this.num <= 0) {
+            alert(`This is the first page!`)
+          } else {
+            this.num--
+            this.scrollToTop()
+          }
+        },
+        nextPage() {
+          if (this.data.length / 20 <= this.num + 1) {
+            alert(`This is the last page!`)
+          } else {
+            this.num = this.num + 1
+            this.scrollToTop()
+          }
+        },
+        changePage(value) {
+          this.num = value
+          this.scrollToTop()
+        }
+      },
+      computed: {
+        displayData() {
+          if (this.data.length >= 20) {
+            return this.data.slice(this.num * 20 + 0, this.num * 20 + 20)
+          } else {
+            return this.data
+          }
+        }
+      },
+      mounted() {
+        this.getData(this.url);
+      }
+    })
+    app.component('card-component', {
+      props: {
+        card: {
+          type: Array,
+          required: true
+        }
+      },
+      template: `
+        <div class="row">
+          <div class="col-md-6 col-lg-4 mb-3" v-for="(item,index) in card" :key="index" @click="display(item)" style="cursor: pointer;">
+            <div class="card bg-light border border-dark p-1 pb-0">
+              <img :src="item.urlToImage" class="card-img-top img-fluid" :alt="item.title">
+                <div class="card-body p-2 overflow-hidden">
+                  <h5 class="card-title fw-bold" style="max-height: 72px;overflow-y: hidden;">{{item.title}}</h5>
+                  <p class="card-text" style="max-height: 96px;overflow-y: hidden;">{{item.description}}</p>
+                  <span class="badge bg-dark me-2">{{item.author}}</span>
+                  <span class="badge bg-dark me-2">{{item.publishedAt.split('T')[0]}}</span>
+                </div>
+            </div>
+          </div>
+        </div>`,
+      methods: {
+        display(item) {
+          this.temp = item
+          this.$emit("custom-display", this.temp);
+        }
+      },
+      data: function () {
+        return {
+          temp: {}
+        }
+      }
+    })
+      .component('input-component', {
+        template: `
+          <div class="row my-3">
+            <form action="javascript:;" class="input-group flex-wrap"  @submit="submitHandler">
+              <input class="form-control" type="text" id="keyword" placeholder="輸入關鍵字" v-model="value.keyword" required>
+              <label class="input-group-text" for="startTime">開始時間</label>
+              <input class="form-control" type="date" id="startTime" v-model="value.startTime" required>
+              <label class="input-group-text" for="endTime">結束時間</label>
+              <input class="form-control" type="date" id="endTime" v-model="value.endTime" required>
+              <select class="form-select" id="sortBy" v-model="value.sortBy" required>
+                <option value="" disabled selected>排列依據</option>
+                <option value="relevancy">相關度</option>
+                <option value="popularity">人氣</option>
+                <option value="publishedAt">發布時間</option>
+              </select>
+              <button class="input-group-text" type="submit">搜尋</button>
+            </form>
+          </div>
+        `,
+        methods: {
+          submitHandler() {
+            this.$emit("custom-submit", this.value);
+          }
+        },
+        data: function () {
+          return {
+            value: {
+              keyword: '',
+              startTime: '',
+              endTime: '',
+              sortBy: '',
+            }
+          }
+        }
+      })
+      .component('detail-component', {
+        props: {
+          temp: {
+            type: Object,
+            required: true
+          }
+        },
+        template: `
+          <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+              <div class="d-flex justify-content-between my-3">
+                <button class="btn btn-sm btn-outline-dark" @click="showHandler">Back</button>
+                <a class="btn btn-sm btn-outline-danger" :href="temp.url" target="_blank">More</a>
+              </div>
+              <div class="card border border-dark">
+                <img :src="temp.urlToImage" class="card-img-top img-fluid" :alt="temp.title">
+                <div class="card-body">
+                  <h2 class="h3 fw-bold text-center">{{temp.title}}</h2>
+                  <span class="badge bg-dark me-2">{{temp.author}}</span>
+                  <span class="badge bg-dark me-2">{{temp.publishedAt}}</span>
+                  <span class="badge bg-dark">{{temp.source}}</span>
+                  <p class="m-0">{{temp.content}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `,
+        methods: {
+          showHandler() {
+            this.isShow = true
+            this.$emit("custom-show", this.isShow);
+          }
+        },
+        data: function () {
+          return {
+            isShow: Boolean
+          }
+        }
+      })
+      .component('pagination-component', {
+        props: {
+          data: {
+            type: Array,
+            required: true
+          },
+          num: {
+            type: Number,
+            required: true
+          }
+        },
+        template: `
+          <div class="row mb-3">
+            <div class="col text-center">
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-dark" @click="prePage()">&laquo; Previous</button>
+                <button type="button" class="btn btn-outline-dark" :class="{active:num===n-1}" v-for="n in Math.ceil(data.length/20)"
+                @click="changePage(n-1)">{{ n
+                }}</button>
+                <button type="button" class="btn btn-outline-dark" @click="nextPage()">Next &raquo;</button>
+              </div>
+            </div>
+          </div>
+        `,
+        methods: {
+          changePage(value) {
+            this.page = value
+            this.$emit("custom-page", this.page);
+          },
+          prePage() {
+            this.$emit("custom-pre");
+          },
+          nextPage() {
+            this.$emit("custom-next");
+          },
+        },
+        data: function () {
+          return {
+            page: Number
+          }
+        }
+      })
+      .mount('#app')
+  </script>
+</body>
+
+</html>
